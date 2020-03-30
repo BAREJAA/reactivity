@@ -1,0 +1,416 @@
+---
+title: "Introduction to Dplyr and Ggplot2"
+params:
+  data: NA
+output:
+  ioslides_presentation: default
+  #html_document: default
+  #word_document: default
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(rlang)
+#set.seed(42)
+df_input <- read_csv(params$data) # df MUST contain at least one character and one numeric variable
+df_input <- df_input[ , sample(ncol(df_input))] # shuffle columns 
+df_numeric <- df_input %>% select_if(is.numeric)
+df_character <- df_input %>% select_if(is.character)
+df_numeric_select <- df_numeric[sample(1:ncol(df_numeric), 1)] # choose a random numeric column
+df_numeric_filter <- df_numeric_select[sample(1:nrow(df_numeric), 1),] # choose a random number within that column
+df_character_select <- df_character[sample(1:ncol(df_character), 1)] # choose a random character column
+df_character_filter <- df_character_select[sample(1:nrow(df_character), 1),] # choose a random value within that column
+```
+
+## Inspecting your dataframe {.build}
+
+Use the `dim()` function to see how many rows (observations) and columns (variables) there are
+
+```{r dim, echo = TRUE, warning = FALSE}
+dim(df_input)
+```
+
+## Inspecting your dataframe {.build}
+
+Use the `glimpse()` function to see what kinds of variables the dataset contains
+```{r glimpse, echo = TRUE, warning = FALSE}
+glimpse(df_input)
+```
+
+## Basic Data Types in R {.build}
+
+R has 6 basic data types -
+
+**character** - `"a"`, `"tidyverse"`  
+
+**numeric** - `2`, `11.5`  
+
+**integer** - `2L` (the `L` tells R to store this as an integer)  
+
+**logical** - `TRUE`, `FALSE`  
+
+**complex** - `1+4i`  
+
+(**raw**)
+
+You will also come across the **double** datatype. It is the same as **numeric**
+
+**factor**. A **factor** is a collection of *ordered* character variables
+
+## Basic Data Types in R {.build}
+
+In addition to the `glimpse()` function, you can use the `class()` function to determine the data type of a specific column
+
+class(df$`r colnames(df_character_select)`)
+
+```{r class, echo = FALSE, warning = FALSE}
+class(df_character_select[[1]])
+```
+
+## (Re)Introducing `%>%` {.build}
+
+The `%>%` operator is a way of "chaining" together strings of commands that make reading your code easy. The following code chunk illustrates how `%>%` works
+
+df_input %>%   
+    select(`r colnames(df_character_select)`, `r colnames(df_numeric_select)`) %>%   
+    filter(`r colnames(df_character_select)` == `r df_character_filter`) %>%   
+    head()  
+
+```{r %>%, echo = FALSE, warning = FALSE}
+df_input %>%
+  select(colnames(df_character_select), colnames(df_numeric_select)) %>% 
+  filter(!!rlang::sym(colnames(df_character_select)) == as.character(df_character_filter)) %>% 
+  head()
+```
+
+## (Re)Introducing `%>%` {.build}
+
+The previous code chunk does the following - it takes you dataset and "pipes" it into `select()`
+
+When you see `%>%`, think "and then"
+
+## (Re)Introducing `%>%` {.build}
+
+The alternative to using `%>%` is running the following code
+
+filter(select(df_input, `r colnames(df_character_select)`, `r colnames(df_numeric_select)`), `r colnames(df_character_select)` == `r df_character_filter`)
+
+Although this is only one line as opposed to three, it's both more difficult to write and more difficult to read
+
+## Introducing the main dplyr verbs {.build}
+
+dplyr is a package that contains a suite of functions that allow you to easily manipulate a dataset
+
+Some of the things you can do are -
+
+- select rows and columns that match specific criteria
+
+- create new variables (columns)
+
+- obtain summary statistics on individual groups within your datsets
+
+The main verbs we will cover are `select()`, `filter()`, `arrange()`, `mutate()`, and `summarise()`. These all combine naturally with `group_by()` which allows you to perform any operation "by group"
+
+## `select()` {.build}
+
+The `select()` verb allows you to extract specific columns from your dataset
+
+The most basic `select()` is one where you comma separate a list of columns you want included
+
+For example, if you only want to select the `r colnames(df_character_select)` and `r colnames(df_numeric_select)` columns, run the following code chunk
+
+df_input %>%   
+    select(`r colnames(df_character_select)`, `r colnames(df_numeric_select)`) %>%  
+    head()
+    
+```{r select, echo = FALSE, warning = FALSE}
+df_input %>%
+  select(colnames(df_character_select), colnames(df_numeric_select)) %>% 
+  head()
+```
+
+## `select()` {.build}
+
+If you want to select all columns *except* `r colnames(df_character_select)`, run the following
+
+df_input %>%  
+    select(-`r colnames(df_character_select)`) %>%  
+    head()
+
+```{r select exclude, echo = FALSE, warning = FALSE}
+df_input %>%
+  select(-!!rlang::sym(colnames(df_character_select))) %>%
+  head()
+```
+
+## `select()` {.build}
+
+Finally, you can provide a range of columns to return two columns and everything in between. For example
+
+df_input %>%   
+    select(`r colnames(df_character_select)`:`r colnames(df_numeric_select)`) %>%  
+    head(1)
+    
+```{r select range, echo = FALSE, warning = FALSE}
+df_input %>%
+  select(colnames(df_character_select):colnames(df_numeric_select)) %>% 
+  head(1)
+```
+
+This code selects the following columns - 
+```{r select range names, echo = FALSE, warning = FALSE}
+df_input %>%
+  select(colnames(df_character_select):colnames(df_numeric_select)) %>% 
+  colnames()
+```
+
+## `filter()` {.build}
+
+The `filter()` verb allows you to choose rows based on certain condition(s) and discard everything else
+
+All filters are performed on some logical statement
+
+If a row meets the condition of this statement (i.e. is true) then it gets chosen (or "filtered"). All other rows are discarded
+
+## `filter()` {.build}
+
+Filtering can be performed on categorical data
+
+df_input %>%     
+    filter(`r colnames(df_character_select)` == `r df_character_filter`) %>%     
+    head(3)  
+
+```{r filter categorical, echo = FALSE, warning = FALSE}
+df_input %>%
+  filter(!!rlang::sym(colnames(df_character_select)) == as.character(df_character_filter)) %>% 
+  head(3)
+```
+
+Note that `filter()` only applies to rows, and has no effect on columns
+
+## `filter()` {.build}
+
+Filtering can also be performed on numerical data
+
+For example, if you wanted to choose `r colnames(df_numeric_select)` with a value greater than `r df_numeric_filter`, you would run the following. 
+
+df_input %>%     
+    filter(`r colnames(df_numeric_select)` > `r df_numeric_filter`) %>%     
+    head(3)  
+
+```{r filter numerical, echo = FALSE, warning = FALSE}
+df_input %>%
+  filter(!!rlang::sym(colnames(df_numeric_select)) > df_numeric_filter) %>% 
+  head(3)
+```
+
+## `filter()` {.build}
+
+To filter on multiple conditions, you can write a sequence of `filter()` commands
+
+df_input %>%       
+    filter(`r colnames(df_character_select)` == `r df_character_filter`) %>%  
+    filter(`r colnames(df_numeric_select)` > `r df_numeric_filter`) %>%    
+    head(3)  
+
+```{r filter both, echo = FALSE, warning = FALSE}
+df_input %>%
+  filter(!!rlang::sym(colnames(df_character_select)) == as.character(df_character_filter)) %>% 
+  filter(!!rlang::sym(colnames(df_numeric_select)) > df_numeric_filter) %>% 
+  head(3)
+```
+
+## `filter()` {.build}
+
+To avoid writing multiple `filter()` commands, multiple logical statements can be put inside a single `filter()` command, separated by commas
+
+df_input %>%         
+    filter(`r colnames(df_character_select)` == `r df_character_filter`,
+            `r colnames(df_numeric_select)` > `r df_numeric_filter`) %>%    
+    head(3)  
+
+<!-- # ```{r filter both efficient, echo = FALSE, warning = FALSE} -->
+<!-- # THIS CODE CHUNK DOES NOT WORK -->
+<!-- # df %>% -->
+<!-- #   filter(!!rlang::sym(colnames(df_character_select)) == as.character(df_character_filter), -->
+<!-- #          !!rlang::sym(colnames(df_numeric_select)) > df_numeric_filter) %>%  -->
+<!-- #   head(3) -->
+<!-- # ```  -->
+
+## `arrange()` {.build}
+
+You can use the `arrange()` verb to sort rows
+
+The input for arrange is one or many columns, and `arrange()` sorts the rows in ascending order i.e. from smallest to largest
+
+For example, to sort rows from smallest to largest `r colnames(df_numeric_select)`, run the following
+
+df_input %>%   
+  arrange(`r colnames(df_numeric_select)`) %>%   
+  head(3)
+
+```{r arrange, echo = FALSE, warning = FALSE}
+df_input %>%
+  arrange(!!rlang::sym(colnames(df_numeric_select))) %>% 
+  head(3)
+```
+
+## `arrange()` {.build}
+
+To reverse this order, use the `desc()` function within `arrange()`
+
+df_input %>%
+  arrange(desc(`r colnames(df_numeric_select)`)) %>%
+  head(3)
+
+```{r arrange desc, echo = FALSE, warning = FALSE}
+df_input %>%
+  arrange(desc(!!rlang::sym(colnames(df_numeric_select)))) %>%
+  head(3)
+```
+
+## `mutate()` {.build}
+
+The `mutate()` verb, unlike the ones covered so far, creates new variable(s) i.e. new column(s). For example
+
+df_input %>%  
+  mutate(new_col = sqrt(`r colnames(df_numeric_select)`)) %>%  
+  head(1)
+
+```{r mutate simple, echo = FALSE, warning = FALSE}
+df_input %>%
+  mutate(new_col = sqrt(!!rlang::sym(colnames(df_numeric_select)))) %>% 
+  head(1)
+```
+
+The code chunk above takes all the elements of the column `r colnames(df_numeric_select)`, evaluates the square root of each element, and populates a new column called `new_col` with these results
+
+## `summarise()` {.build}
+
+`summarise()` produces a new dataframe that aggregates that values of a column based on a certain condition.
+
+For example, to calculate the mean `r colnames(df_numeric_select)`, run the following
+
+df_input %>%      
+  summarise(mean(`r colnames(df_numeric_select)`)) 
+
+```{r summarise, echo = FALSE, warning = FALSE}
+df_input %>%
+  summarise(mean(!!rlang::sym(colnames(df_numeric_select)))) 
+```
+
+
+## `group_by()` {.build}
+
+`group_by()` and `summarise()` can be used in combination to summarise by groups
+
+df_input %>%  
+  group_by(`r colnames(df_character_select)`) %>%  
+  summarise(mean(`r colnames(df_numeric_select)`))
+  
+```{r group_by and summarise, echo = FALSE, warning = FALSE}
+df_input %>%
+  group_by(!!rlang::sym(colnames(df_character_select))) %>% 
+  summarise(mean(!!rlang::sym(colnames(df_numeric_select)))) 
+```
+
+## Saving a new dataset
+
+If you'd like to save the output of your wrangling, you will need to use the `<-` or `->` operators
+
+df_new <- df_input %>%  
+            group_by(`r colnames(df_character_select)`) %>%  
+            summarise(mean(`r colnames(df_numeric_select)`))  
+
+To save `df_new` as a new file (e.g. csv), run the following
+
+write_csv(df_new, "df_new.csv")
+
+## For more help
+
+Run the following to access the Dplyr vignette
+
+browseVignettes("dplyr")
+
+# Basic ggplot2
+
+## Plotting a dot plot {.build}
+df_input %>%     
+  ggplot(aes(`r colnames(df_numeric)[1]`, `r colnames(df_numeric)[2]`)) +    
+  geom_point()  
+
+```{r dot plot, echo = FALSE, warning = FALSE}
+x <- sym(colnames(df_numeric)[1])
+y <- sym(colnames(df_numeric)[2])
+
+df_input %>% 
+  ggplot(aes(!!x, !!y)) +
+  geom_point() 
+```
+
+## Facetting a dot plot {.build}
+df_input %>%     
+  ggplot(aes(`r colnames(df_numeric)[1]`, `r colnames(df_numeric)[2]`)) +    
+  geom_point() +  
+  facet_wrap(~`r colnames(df_character)[1]`)
+```{r dot plot facet, echo = FALSE, warning = FALSE}
+x <- sym(colnames(df_numeric)[1])
+y <- sym(colnames(df_numeric)[2])
+z <- sym(colnames(df_character)[1])
+
+df_input %>% 
+  ggplot(aes(!!x, !!y)) +
+  geom_point() +
+  facet_wrap(vars(!!z)) # no idea why this works
+# https://community.rstudio.com/t/tidy-eval-and-ggplot-inconsistent-results-with-facet-wrap/14928/2
+```
+
+## Making a dot plot pretty {.build}
+df_input %>%     
+  ggplot(aes(`r colnames(df_numeric)[1]`, `r colnames(df_numeric)[2]`, colour = `r colnames(df_character)[1]`)) +    
+  geom_point() +
+  scale_colour_viridis_d()
+
+```{r pretty dot plot, echo = FALSE, warning = FALSE, message = FALSE}
+library(viridis)
+
+x <- sym(colnames(df_numeric)[1])
+y <- sym(colnames(df_numeric)[2])
+z <- sym(colnames(df_character)[1])
+
+df_input %>% 
+  ggplot(aes(!!x, !!y, colour = !!z)) +
+  geom_point() +
+  scale_colour_viridis_d()
+```
+
+## Plotting a histogram {.build}
+
+df_input %>%     
+  ggplot(aes(`r colnames(df_numeric)[1]`)) +    
+  geom_histogram()  
+  
+```{r histogram, echo = FALSE, warning = FALSE, message = FALSE}
+y <- sym(colnames(df_numeric)[1])
+
+df_input %>% 
+  ggplot(aes(!!y)) +
+  geom_histogram() 
+```
+
+## Plotting a bar graph {.build}
+
+df_input %>%       
+  ggplot(aes(`r colnames(df_character)[1]`, `r colnames(df_numeric)[1]`)) +      
+  geom_col()    
+  
+```{r bar graph, echo = FALSE, warning = FALSE, message = FALSE}
+x <- sym(colnames(df_character)[1])
+y <- sym(colnames(df_numeric)[1])
+
+df_input %>% 
+  ggplot(aes(!!x, !!y)) +
+  geom_col() 
+```
