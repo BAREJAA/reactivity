@@ -2,14 +2,14 @@
 This package allows you to use your own tidy datasets to automatically generate an "Introduction to Tidyverse" presentation
 
 # Installation
-To install this package, run the following in your RStudio console -
+To install this package, run the following in your RStudio console -  
 `devtools::install_github("BAREJAA/reactivity")`
 
 # Example
-Once installed, load the package by running
+Once installed, load the package by running  
 `library(reactivity)`
 
-Then, change your working directory to the one that contains the files you will need
+Then, change your working directory to the one that contains the files you will need  
 `setwd(system.file("extdata", package = "reactivity"))`
 
 Open the `report.Rmd` file and click select "Knit with Paramters". Enter the name of one of the three example datasets provided - iris.csv, genome.csv, or heart_mod.csv. Then click the "Knit" button.
