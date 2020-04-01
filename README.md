@@ -16,5 +16,7 @@ Go to your working directory, open the `report.Rmd` file and click select "Knit 
 
 You should now have an html presentation that was built using the provided dataset
 
-To use your own dataset, make sure that it is in a tidy format and saved as a .csv file. Move it to your working directory (the one that contains `report.Rmd`) and follow the instructions provided above but using your own dataset instead.
+To use your own dataset, make sure that it is in a tidy format and saved as a .csv file. Move it to your working directory (the one that contains `report.Rmd`) and follow the instructions provided above but using your own dataset instead.  
+
+Please note that your dataset must have at least one numeric and one character variable.
 
