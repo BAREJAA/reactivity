@@ -16,7 +16,7 @@ library(rlang)
 #set.seed(42)
 df_input <- read_csv(params$data) # df MUST contain at least one character and one numeric variable
 df_input <- df_input[ , sample(ncol(df_input))] # shuffle columns 
-df_numeric <- df_input %>% select_if(is.numeric)
+df_numeric <- df_input %>% select_if(~is.numeric(.) & length(unique(.)) > 10) # this is so that you avoid selecting variables that are actually factors
 df_character <- df_input %>% select_if(is.character)
 df_numeric_select <- df_numeric[sample(1:ncol(df_numeric), 1)] # choose a random numeric column
 df_numeric_filter <- df_numeric_select[sample(1:nrow(df_numeric), 1),] # choose a random number within that column

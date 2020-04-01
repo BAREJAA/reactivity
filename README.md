@@ -12,7 +12,7 @@ Once installed, load the package by running
 Then, change your working directory to the one that contains the files you will need  
 `setwd(system.file("extdata", package = "reactivity"))`
 
-Go to your working directory, open the `report.Rmd` file and click select "Knit with Paramters". Enter the name of the example dataset provided - iris.csv. Then click the "Knit" button.
+Go to your working directory, open the `report.Rmd` file and click select "Knit with Paramters". Enter the name of an example dataset provided - iris.csv or heart_mod.csv. Then click the "Knit" button.
 
 You should now have an html presentation that was built using the provided dataset
 
