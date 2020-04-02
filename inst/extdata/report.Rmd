@@ -336,12 +336,20 @@ browseVignettes("dplyr")
 
 # Basic ggplot2
 
-## Plotting a dot plot {.build}
-df_input %>%     
-  ggplot(aes(`r colnames(df_numeric)[1]`, `r colnames(df_numeric)[2]`)) +    
-  geom_point()  
+## Basics of a ggplot code {.build}
 
-```{r dot plot, echo = FALSE, warning = FALSE}
+Below is an example of the most basic form of the ggplot code
+
+ggplot(data) +   
+  geom(mapping=aes(x, y)) 
+
+## Basics of a ggplot code {.build}
+Take a moment to look back at the code you ran previously. You can see that in that code we assigned a dataset and the information we needed to map it to a scatterplot.
+
+## Basics of a ggplot code {.build}
+ggplot(data = df_input) +  
+geom_point(mapping=aes(x = `r colnames(df_numeric)[1]`, y = `r colnames(df_numeric)[2]`))
+```{r simple plot, echo = FALSE, warning = FALSE}
 x <- sym(colnames(df_numeric)[1])
 y <- sym(colnames(df_numeric)[2])
 
@@ -350,67 +358,345 @@ df_input %>%
   geom_point() 
 ```
 
-## Facetting a dot plot {.build}
-df_input %>%     
-  ggplot(aes(`r colnames(df_numeric)[1]`, `r colnames(df_numeric)[2]`)) +    
-  geom_point() +  
-  facet_wrap(~`r colnames(df_character)[1]`)
-```{r dot plot facet, echo = FALSE, warning = FALSE}
-x <- sym(colnames(df_numeric)[1])
-y <- sym(colnames(df_numeric)[2])
-z <- sym(colnames(df_character)[1])
+## Basics of a ggplot code {.build}
+A note on ggplot style: while you can put the `+` at the beginning of the next line, it is generally put at the end of the previous line.
 
-df_input %>% 
-  ggplot(aes(!!x, !!y)) +
-  geom_point() +
-  facet_wrap(vars(!!z)) # no idea why this works
-# https://community.rstudio.com/t/tidy-eval-and-ggplot-inconsistent-results-with-facet-wrap/14928/2
+How does this chunk of code differ from the previous chunk?
+
+ggplot(df_input) +    
+geom_point(aes(x = `r colnames(df_numeric)[1]`, y = `r colnames(df_numeric)[2]`))
+
+## Geoms {.build}
+When plotting your data, it is often helpful to take a glimpse at the data you intend to plot to know what kinds of variables you will be working with
+```{r glimpse again}
+glimpse(df_input)
 ```
 
-## Making a dot plot pretty {.build}
-df_input %>%     
-  ggplot(aes(`r colnames(df_numeric)[1]`, `r colnames(df_numeric)[2]`, colour = `r colnames(df_character)[1]`)) +    
-  geom_point() +
-  scale_colour_viridis_d()
+## Geoms {.build}
+So now that you know your variable types, how do you know what geoms to use??
+Use the following resources! 
+  * https://rstudio.com/wp-content/uploads/2015/03/ggplot2-cheatsheet.pdf
+  * https://www.data-to-viz.com/ 
 
-```{r pretty dot plot, echo = FALSE, warning = FALSE, message = FALSE}
-library(viridis)
+Sometimes you will run into errors indicating more information is needed for a plot or that you do not have the correct variable types. For more in depth information on the geoms, I find the ggplot2 reference page more helpful than the built in help pages
+  * https://ggplot2.tidyverse.org/reference/index.html
 
-x <- sym(colnames(df_numeric)[1])
-y <- sym(colnames(df_numeric)[2])
-z <- sym(colnames(df_character)[1])
+## Aesthetics {.build}
+Everything up to this point gets you a basic graph- but what about colors, shapes and overal style? 
 
-df_input %>% 
-  ggplot(aes(!!x, !!y, colour = !!z)) +
-  geom_point() +
-  scale_colour_viridis_d()
-```
+There are 5 basic aesthetics you can can change
+1. Color- changes the outline color of your datapoints
+2. size
+3. Shape
+4. alpha- changes the transparency of each point
+5. fill- changes the fill color of your points
 
-## Plotting a histogram {.build}
+## Global vs Local {.build}
+In ggplot2, we have the options to set mappings globally or locally. Setting a mapping globally means to set those values in the original ggplot function.
+Example: Earlier in class you made this graph:
 
-df_input %>%     
-  ggplot(aes(`r colnames(df_numeric)[1]`)) +    
-  geom_histogram()  
-  
-```{r histogram, echo = FALSE, warning = FALSE, message = FALSE}
+ggplot(df_input) +    
+  geom_jitter(aes(x=`r colnames(df_character)[1]`, y=log(`r colnames(df_numeric)[1]`)))+
+  geom_boxplot(aes(x=`r colnames(df_character)[1]`, y=log(`r colnames(df_numeric)[1]`)))
+
+## Global vs Local {.build}
+```{r global v local, echo = FALSE, warning = FALSE}
+x <- sym(colnames(df_character)[1])
 y <- sym(colnames(df_numeric)[1])
 
 df_input %>% 
-  ggplot(aes(!!y)) +
-  geom_histogram() 
+  ggplot() +
+  geom_jitter(aes(!!x, !!y)) +
+  geom_boxplot(aes(!!x, !!y))
 ```
 
-## Plotting a bar graph {.build}
+## Global vs Local {.build}
+However, if we map our x and y values in the ggplot function we find that we generate the same graph  
+ggplot(df_input, aes(x=`r colnames(df_character)[1]`, y=log(`r colnames(df_numeric)[1]`)) +
+geom_jitter() +  
+geom_boxplot()  
+```{r global v local repeat, echo = FALSE, warning = FALSE}
+x <- sym(colnames(df_character)[1])
+y <- sym(colnames(df_numeric)[1])
 
-df_input %>%       
-  ggplot(aes(`r colnames(df_character)[1]`, `r colnames(df_numeric)[1]`)) +      
-  geom_col()    
-  
-```{r bar graph, echo = FALSE, warning = FALSE, message = FALSE}
+df_input %>% 
+  ggplot() +
+  geom_jitter(aes(!!x, !!y)) +
+  geom_boxplot(aes(!!x, !!y))
+```
+
+## Global vs Local {.build}
+This is because when you set the aes mappings in the orignal ggplot function you are setting the aes **globally**.
+This means all the functions afterwards will inherit that mapping. So in our Example this means that both the jitter and boxplot geoms know to graph Cell Region by Protein Length
+
+You can also set aes values **locally** within the geom function. Doing so will only change the values in that geom
+
+## Global vs Local {.build}
+ggplot(df_input, aes(x=`r colnames(df_character)[1]`, y=log(`r colnames(df_numeric)[1]`)) +  
+  geom_jitter() +    
+  geom_boxplot(aes(color = log(`r colnames(df_character)[1]`))   
+```{r global v local colour, echo = FALSE, warning = FALSE}
 x <- sym(colnames(df_character)[1])
 y <- sym(colnames(df_numeric)[1])
 
 df_input %>% 
   ggplot(aes(!!x, !!y)) +
-  geom_col() 
+  geom_jitter() +
+  geom_boxplot(aes(colour = !!x))
 ```
+
+## Global vs Local {.build}
+Data can also be set locally or globally. For this example, let's filter our original data first using the `dplyr::filter` function
+
+df_filter <- filter(df_input, `r colnames(df_numeric)[1]` > `r round(mean(df_numeric[[1]]))`)
+
+## Global vs Local {.build}
+Now, let's label only the proteins identified in our large_prot data by setting data locally in a new geom
+ggplot(df_input, aes(x=`r colnames(df_character)[1]`, y=log(`r colnames(df_numeric)[1]`)) +    
+  geom_jitter() +      
+  geom_boxplot(aes(color = log(`r colnames(df_character)[1]`)) +    
+  geom_label(data=df_filter, aes(label=`r colnames(df_character)[2]`))
+
+## Global vs Local {.build}
+```{r global v local colour filter, echo = FALSE, warning = FALSE}
+x <- sym(colnames(df_character)[1])
+z <- sym(colnames(df_character)[2])
+y <- sym(colnames(df_numeric)[1])
+df_filter <- filter(df_input, df_numeric[1] > round(mean(df_numeric[[1]])))
+
+df_input %>% 
+  ggplot(aes(!!x, !!y)) +
+  geom_jitter() +
+  geom_boxplot(aes(colour = !!x)) +
+  geom_label(data=df_filter, aes(label=!!z)) 
+```
+
+## Global vs Local {.build}
+You notice we have to indicate the new dataset, but because it has the same x and y values, we did not need to set those mappings
+
+## Labels and Legends {.build}
+You've likely noticed that up until this point ggplot has labeled axes, but not necessarily in a very pleasing manner.  
+We can change these settings in our graph using the labs() function.   
+
+Let's start by simply changing the x-axis label
+ggplot(df_input, aes(x=`r colnames(df_character)[1]`, y=log(`r colnames(df_numeric)[1]`)) +    
+  geom_jitter() +      
+  geom_boxplot(aes(color = log(`r colnames(df_character)[1]`)) +    
+  geom_label(data=df_filter, aes(label=`r colnames(df_character)[2]`)) +  
+  labs(x = "`r str_to_title(colnames(df_character)[1])`")
+
+## Labels and Legends {.build}
+```{r global v local colour filter label, echo = FALSE, warning = FALSE}
+x <- sym(colnames(df_character)[1])
+z <- sym(colnames(df_character)[2])
+y <- sym(colnames(df_numeric)[1])
+df_filter <- filter(df_input, df_numeric[1] > round(mean(df_numeric[[1]])))
+
+df_input %>% 
+  ggplot(aes(!!x, !!y)) +
+  geom_jitter() +
+  geom_boxplot(aes(colour = !!x)) +
+  geom_label(data=df_filter, aes(label=!!z)) +
+  labs(x = str_to_title(sym(colnames(df_character)[1])))
+```
+
+## Labels and Legends {.build}
+Now, seeing as we have a pretty explanatory legend, we could try to get rid of it. This becomes especially useful when ggplot gives you legends that don't make sense to show
+
+ggplot(df_input, aes(x=`r colnames(df_character)[1]`, y=log(`r colnames(df_numeric)[1]`)) +    
+  geom_jitter() +      
+  geom_boxplot(aes(color = log(`r colnames(df_character)[1]`)) +    
+  geom_label(data=df_filter, aes(label=`r colnames(df_character)[2]`)) +  
+  labs(x = "`r str_to_title(colnames(df_character)[1])`") +  
+  guides(color = "none")
+
+## Labels and Legends {.build}
+```{r global v local colour filter label guides, echo = FALSE, warning = FALSE}
+x <- sym(colnames(df_character)[1])
+z <- sym(colnames(df_character)[2])
+y <- sym(colnames(df_numeric)[1])
+df_filter <- filter(df_input, df_numeric[1] > round(mean(df_numeric[[1]])))
+
+df_input %>% 
+  ggplot(aes(!!x, !!y)) +
+  geom_jitter() +
+  geom_boxplot(aes(colour = !!x)) +
+  geom_label(data=df_filter, aes(label=!!z)) +
+  labs(x = str_to_title(sym(colnames(df_character)[1]))) +
+  guides(color = "none")
+```
+
+## Faceting {.build}
+Faceting allows you to create multiple graphs side by side in one panel. Especially useful when you want to see the data together, but not on top of eachother
+
+For example
+
+ggplot(df_input) +  
+geom_point(aes(x=`r colnames(df_character)[1]`, y=log(`r colnames(df_numeric)[1]`)) +  
+facet_grid(cols = vars(`r colnames(df_character)[2]`))
+
+## Faceting {.build}
+```{r facetting, echo = FALSE, warning = FALSE}
+x <- sym(colnames(df_character)[1])
+z <- sym(colnames(df_character)[2])
+y <- sym(colnames(df_numeric)[1])
+
+df_input %>% 
+  ggplot(aes(!!x, !!y)) +
+  geom_point() +
+  facet_grid(cols = vars(!!z))
+```
+
+## Coordinate flipping {.build}
+Coordinate flipping is an especially useful tool when your x-axis includes characters that overlap. Coordinate flipping keeps your mappings and aes the same, but flips coordinates so that your x-axis displays on the Y-axis instead. This allows any names included in the x-axis titles to be read more easily  
+
+ggplot(df_input) +  
+geom_jitter(aes(x=`r colnames(df_character)[1]`, y=log(`r colnames(df_numeric)[1]`)) +  
+coord_flip()
+
+## Coordinate flipping {.build}
+```{r coord flipping, echo = FALSE, warning = FALSE}
+x <- sym(colnames(df_character)[1])
+y <- sym(colnames(df_numeric)[1])
+
+df_input %>% 
+  ggplot(aes(!!x, !!y)) +
+  geom_jitter() +
+  coord_flip()
+```
+
+## Themes {.build}
+You can change almost everything you see on your chart, but a lot of the things you may look to change are part of the "theme"  
+
+Here we are going to change some features about our title text
+
+ggplot(df_input, aes(x=`r colnames(df_character)[1]`, y=log(`r colnames(df_numeric)[1]`)) +    
+  geom_jitter() +      
+  geom_boxplot(aes(color = log(`r colnames(df_character)[1]`)) +  
+  labs(title = "My first plot") +  
+  theme(
+     plot.title = element_text(face = "bold", size = 12)
+    ) 
+
+## Themes {.build}
+```{r themes, echo = FALSE, warning = FALSE}
+x <- sym(colnames(df_character)[1])
+z <- sym(colnames(df_character)[2])
+y <- sym(colnames(df_numeric)[1])
+df_filter <- filter(df_input, df_numeric[1] > round(mean(df_numeric[[1]])))
+
+df_input %>% 
+  ggplot(aes(!!x, !!y)) +
+  geom_jitter() +
+  geom_boxplot(aes(colour = !!x)) +
+  labs(title = "My first plot") +
+  theme(
+     plot.title = element_text(face = "bold", size = 12)
+    ) 
+```
+
+## Themes {.build}
+Next, let's change the aesthetics of our legend box  
+
+ggplot(df_input, aes(x=`r colnames(df_character)[1]`, y=log(`r colnames(df_numeric)[1]`)) +    
+  geom_jitter() +      
+  geom_boxplot(aes(color = log(`r colnames(df_character)[1]`)) +  
+  labs(title = "My first plot") +  
+  theme(
+     plot.title = element_text(face = "bold", size = 12),
+     legend.background = element_rect(fill="gray", colour="black")
+    ) 
+
+## Themes {.build}
+```{r themes two, echo = FALSE, warning = FALSE}
+x <- sym(colnames(df_character)[1])
+z <- sym(colnames(df_character)[2])
+y <- sym(colnames(df_numeric)[1])
+df_filter <- filter(df_input, df_numeric[1] > round(mean(df_numeric[[1]])))
+
+df_input %>% 
+  ggplot(aes(!!x, !!y)) +
+  geom_jitter() +
+  geom_boxplot(aes(colour = !!x)) +
+  labs(title = "My first plot") +
+  theme(
+     plot.title = element_text(face = "bold", size = 12),
+     legend.background = element_rect(fill="gray", colour="black")
+    ) 
+```
+
+## Themes {.build}
+Finally, let's change the legend postion  
+
+ggplot(df_input, aes(x=`r colnames(df_character)[1]`, y=log(`r colnames(df_numeric)[1]`)) +    
+  geom_jitter() +      
+  geom_boxplot(aes(color = log(`r colnames(df_character)[1]`)) +  
+  labs(title = "My first plot") +  
+  theme(
+     plot.title = element_text(face = "bold", size = 12),
+     legend.background = element_rect(fill="gray", colour="black"),
+     legend.position = "bottom"
+    ) 
+
+## Themes {.build}
+```{r themes three, echo = FALSE, warning = FALSE}
+x <- sym(colnames(df_character)[1])
+z <- sym(colnames(df_character)[2])
+y <- sym(colnames(df_numeric)[1])
+df_filter <- filter(df_input, df_numeric[1] > round(mean(df_numeric[[1]])))
+
+df_input %>% 
+  ggplot(aes(!!x, !!y)) +
+  geom_jitter() +
+  geom_boxplot(aes(colour = !!x)) +
+  labs(title = "My first plot") +
+  theme(
+     plot.title = element_text(face = "bold", size = 12),
+     legend.background = element_rect(fill="gray", colour="black"),
+     legend.position = "bottom"
+    ) 
+```
+
+## Themes {.build}
+Pre-Set themes also exist as an easy way to change the entire theme of your graph quickly. They can also be combined with custome theme settings  
+
+ggplot(df_input, aes(x=`r colnames(df_character)[1]`, y=log(`r colnames(df_numeric)[1]`)) +    
+  geom_jitter() +      
+  geom_boxplot(aes(color = log(`r colnames(df_character)[1]`)) +  
+  labs(title = "My first plot") +  
+  theme_bw()
+
+## Themes {.build}
+```{r themes four, echo = FALSE, warning = FALSE}
+x <- sym(colnames(df_character)[1])
+z <- sym(colnames(df_character)[2])
+y <- sym(colnames(df_numeric)[1])
+df_filter <- filter(df_input, df_numeric[1] > round(mean(df_numeric[[1]])))
+
+df_input %>% 
+  ggplot(aes(!!x, !!y)) +
+  geom_jitter() +
+  geom_boxplot(aes(colour = !!x)) +
+  labs(title = "My first plot") +
+  theme_bw()
+```
+
+## Saving plots using ggsave {.build}
+
+If you make a plot there are a few ways to save it, though the simplest is to use ggsave  
+
+ggsave("ggsaveexample.png")  
+
+You can change the type of file you save or even the size in inches.  
+example:  
+
+ggsave("ggsaveexample.pdf", width = 6, height = 6)  
+
+## Saving plots using ggsave {.build}
+Where does it save??
+
+getwd()
+```{r getwd}
+getwd()
+```
+
