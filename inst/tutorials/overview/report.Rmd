@@ -1,0 +1,702 @@
+---
+title: "Introduction to Dplyr and Ggplot2"
+params:
+  data: NA
+output:
+  ioslides_presentation: default
+  #html_document: default
+  #word_document: default
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(rlang)
+#set.seed(42)
+df_input <- read_csv(params$data) # df MUST contain at least one character and one numeric variable
+df_input <- df_input[ , sample(ncol(df_input))] # shuffle columns 
+df_numeric <- df_input %>% select_if(~is.numeric(.) & length(unique(.)) > 10) # this is so that you avoid selecting variables that are actually factors
+df_character <- df_input %>% select_if(~is.character(.) & length(unique(.) < 5)) 
+df_numeric_select <- df_numeric[sample(1:ncol(df_numeric), 1)] # choose a random numeric column
+df_numeric_filter <- df_numeric_select[sample(1:nrow(df_numeric), 1),] # choose a random number within that column
+df_character_select <- df_character[sample(1:ncol(df_character), 1)] # choose a random character column
+df_character_filter <- df_character_select[sample(1:nrow(df_character), 1),] # choose a random value within that column
+```
+
+## Inspecting your dataframe {.build}
+
+Use the `dim()` function to see how many rows (observations) and columns (variables) there are
+
+```{r dim, echo = TRUE, warning = FALSE}
+dim(df_input)
+```
+
+## Inspecting your dataframe {.build}
+
+Use the `glimpse()` function to see what kinds of variables the dataset contains
+```{r glimpse, echo = TRUE, warning = FALSE}
+glimpse(df_input)
+```
+
+## Basic Data Types in R {.build}
+
+R has 6 basic data types -
+
+**character** - `"a"`, `"tidyverse"`  
+
+**numeric** - `2`, `11.5`  
+
+**integer** - `2L` (the `L` tells R to store this as an integer)  
+
+**logical** - `TRUE`, `FALSE`  
+
+**complex** - `1+4i`  
+
+(**raw**)
+
+You will also come across the **double** datatype. It is the same as **numeric**
+
+**factor**. A **factor** is a collection of *ordered* character variables
+
+## Basic Data Types in R {.build}
+
+In addition to the `glimpse()` function, you can use the `class()` function to determine the data type of a specific column
+
+class(df$`r colnames(df_character_select)`)
+
+```{r class, echo = FALSE, warning = FALSE}
+class(df_character_select[[1]])
+```
+
+## (Re)Introducing `%>%` {.build}
+
+The `%>%` operator is a way of "chaining" together strings of commands that make reading your code easy. The following code chunk illustrates how `%>%` works
+
+df_input %>%   
+    select(`r colnames(df_character_select)`, `r colnames(df_numeric_select)`) %>%   
+    filter(`r colnames(df_character_select)` == `r df_character_filter`) %>%   
+    head()  
+
+```{r %>%, echo = FALSE, warning = FALSE}
+df_input %>%
+  select(colnames(df_character_select), colnames(df_numeric_select)) %>% 
+  filter(!!rlang::sym(colnames(df_character_select)) == as.character(df_character_filter)) %>% 
+  head()
+```
+
+## (Re)Introducing `%>%` {.build}
+
+The previous code chunk does the following - it takes you dataset and "pipes" it into `select()`
+
+When you see `%>%`, think "and then"
+
+## (Re)Introducing `%>%` {.build}
+
+The alternative to using `%>%` is running the following code
+
+filter(select(df_input, `r colnames(df_character_select)`, `r colnames(df_numeric_select)`), `r colnames(df_character_select)` == `r df_character_filter`)
+
+Although this is only one line as opposed to three, it's both more difficult to write and more difficult to read
+
+## Introducing the main dplyr verbs {.build}
+
+dplyr is a package that contains a suite of functions that allow you to easily manipulate a dataset
+
+Some of the things you can do are -
+
+- select rows and columns that match specific criteria
+
+- create new variables (columns)
+
+- obtain summary statistics on individual groups within your datsets
+
+The main verbs we will cover are `select()`, `filter()`, `arrange()`, `mutate()`, and `summarise()`. These all combine naturally with `group_by()` which allows you to perform any operation "by group"
+
+## `select()` {.build}
+
+The `select()` verb allows you to extract specific columns from your dataset
+
+The most basic `select()` is one where you comma separate a list of columns you want included
+
+For example, if you only want to select the `r colnames(df_character_select)` and `r colnames(df_numeric_select)` columns, run the following code chunk
+
+df_input %>%   
+    select(`r colnames(df_character_select)`, `r colnames(df_numeric_select)`) %>%  
+    head()
+    
+```{r select, echo = FALSE, warning = FALSE}
+df_input %>%
+  select(colnames(df_character_select), colnames(df_numeric_select)) %>% 
+  head()
+```
+
+## `select()` {.build}
+
+If you want to select all columns *except* `r colnames(df_character_select)`, run the following
+
+df_input %>%  
+    select(-`r colnames(df_character_select)`) %>%  
+    head()
+
+```{r select exclude, echo = FALSE, warning = FALSE}
+df_input %>%
+  select(-!!rlang::sym(colnames(df_character_select))) %>%
+  head()
+```
+
+## `select()` {.build}
+
+Finally, you can provide a range of columns to return two columns and everything in between. For example
+
+df_input %>%   
+    select(`r colnames(df_character_select)`:`r colnames(df_numeric_select)`) %>%  
+    head(1)
+    
+```{r select range, echo = FALSE, warning = FALSE}
+df_input %>%
+  select(colnames(df_character_select):colnames(df_numeric_select)) %>% 
+  head(1)
+```
+
+This code selects the following columns - 
+```{r select range names, echo = FALSE, warning = FALSE}
+df_input %>%
+  select(colnames(df_character_select):colnames(df_numeric_select)) %>% 
+  colnames()
+```
+
+## `filter()` {.build}
+
+The `filter()` verb allows you to choose rows based on certain condition(s) and discard everything else
+
+All filters are performed on some logical statement
+
+If a row meets the condition of this statement (i.e. is true) then it gets chosen (or "filtered"). All other rows are discarded
+
+## `filter()` {.build}
+
+Filtering can be performed on categorical data
+
+df_input %>%     
+    filter(`r colnames(df_character_select)` == `r df_character_filter`) %>%     
+    head(3)  
+
+```{r filter categorical, echo = FALSE, warning = FALSE}
+df_input %>%
+  filter(!!rlang::sym(colnames(df_character_select)) == as.character(df_character_filter)) %>% 
+  head(3)
+```
+
+Note that `filter()` only applies to rows, and has no effect on columns
+
+## `filter()` {.build}
+
+Filtering can also be performed on numerical data
+
+For example, if you wanted to choose `r colnames(df_numeric_select)` with a value greater than `r df_numeric_filter`, you would run the following. 
+
+df_input %>%     
+    filter(`r colnames(df_numeric_select)` > `r df_numeric_filter`) %>%     
+    head(3)  
+
+```{r filter numerical, echo = FALSE, warning = FALSE}
+df_input %>%
+  filter(!!rlang::sym(colnames(df_numeric_select)) > df_numeric_filter) %>% 
+  head(3)
+```
+
+## `filter()` {.build}
+
+To filter on multiple conditions, you can write a sequence of `filter()` commands
+
+df_input %>%       
+    filter(`r colnames(df_character_select)` == `r df_character_filter`) %>%  
+    filter(`r colnames(df_numeric_select)` > `r df_numeric_filter`) %>%    
+    head(3)  
+
+```{r filter both, echo = FALSE, warning = FALSE}
+df_input %>%
+  filter(!!rlang::sym(colnames(df_character_select)) == as.character(df_character_filter)) %>% 
+  filter(!!rlang::sym(colnames(df_numeric_select)) > df_numeric_filter) %>% 
+  head(3)
+```
+
+## `filter()` {.build}
+
+To avoid writing multiple `filter()` commands, multiple logical statements can be put inside a single `filter()` command, separated by commas
+
+df_input %>%         
+    filter(`r colnames(df_character_select)` == `r df_character_filter`,
+            `r colnames(df_numeric_select)` > `r df_numeric_filter`) %>%    
+    head(3)  
+
+<!-- # ```{r filter both efficient, echo = FALSE, warning = FALSE} -->
+<!-- # THIS CODE CHUNK DOES NOT WORK -->
+<!-- # df %>% -->
+<!-- #   filter(!!rlang::sym(colnames(df_character_select)) == as.character(df_character_filter), -->
+<!-- #          !!rlang::sym(colnames(df_numeric_select)) > df_numeric_filter) %>%  -->
+<!-- #   head(3) -->
+<!-- # ```  -->
+
+## `arrange()` {.build}
+
+You can use the `arrange()` verb to sort rows
+
+The input for arrange is one or many columns, and `arrange()` sorts the rows in ascending order i.e. from smallest to largest
+
+For example, to sort rows from smallest to largest `r colnames(df_numeric_select)`, run the following
+
+df_input %>%   
+  arrange(`r colnames(df_numeric_select)`) %>%   
+  head(3)
+
+```{r arrange, echo = FALSE, warning = FALSE}
+df_input %>%
+  arrange(!!rlang::sym(colnames(df_numeric_select))) %>% 
+  head(3)
+```
+
+## `arrange()` {.build}
+
+To reverse this order, use the `desc()` function within `arrange()`
+
+df_input %>%
+  arrange(desc(`r colnames(df_numeric_select)`)) %>%
+  head(3)
+
+```{r arrange desc, echo = FALSE, warning = FALSE}
+df_input %>%
+  arrange(desc(!!rlang::sym(colnames(df_numeric_select)))) %>%
+  head(3)
+```
+
+## `mutate()` {.build}
+
+The `mutate()` verb, unlike the ones covered so far, creates new variable(s) i.e. new column(s). For example
+
+df_input %>%  
+  mutate(new_col = sqrt(`r colnames(df_numeric_select)`)) %>%  
+  head(1)
+
+```{r mutate simple, echo = FALSE, warning = FALSE}
+df_input %>%
+  mutate(new_col = sqrt(!!rlang::sym(colnames(df_numeric_select)))) %>% 
+  head(1)
+```
+
+The code chunk above takes all the elements of the column `r colnames(df_numeric_select)`, evaluates the square root of each element, and populates a new column called `new_col` with these results
+
+## `summarise()` {.build}
+
+`summarise()` produces a new dataframe that aggregates that values of a column based on a certain condition.
+
+For example, to calculate the mean `r colnames(df_numeric_select)`, run the following
+
+df_input %>%      
+  summarise(mean(`r colnames(df_numeric_select)`)) 
+
+```{r summarise, echo = FALSE, warning = FALSE}
+df_input %>%
+  summarise(mean(!!rlang::sym(colnames(df_numeric_select)))) 
+```
+
+
+## `group_by()` {.build}
+
+`group_by()` and `summarise()` can be used in combination to summarise by groups
+
+df_input %>%  
+  group_by(`r colnames(df_character_select)`) %>%  
+  summarise(mean(`r colnames(df_numeric_select)`))
+  
+```{r group_by and summarise, echo = FALSE, warning = FALSE}
+df_input %>%
+  group_by(!!rlang::sym(colnames(df_character_select))) %>% 
+  summarise(mean(!!rlang::sym(colnames(df_numeric_select)))) 
+```
+
+## Saving a new dataset
+
+If you'd like to save the output of your wrangling, you will need to use the `<-` or `->` operators
+
+df_new <- df_input %>%  
+            group_by(`r colnames(df_character_select)`) %>%  
+            summarise(mean(`r colnames(df_numeric_select)`))  
+
+To save `df_new` as a new file (e.g. csv), run the following
+
+write_csv(df_new, "df_new.csv")
+
+## For more help
+
+Run the following to access the Dplyr vignette
+
+browseVignettes("dplyr")
+
+# Basic ggplot2
+
+## Basics of a ggplot code {.build}
+
+Below is an example of the most basic form of the ggplot code
+
+ggplot(data) +   
+  geom(mapping=aes(x, y)) 
+
+## Basics of a ggplot code {.build}
+Take a moment to look back at the code you ran previously. You can see that in that code we assigned a dataset and the information we needed to map it to a scatterplot.
+
+## Basics of a ggplot code {.build}
+ggplot(data = df_input) +  
+geom_point(mapping=aes(x = `r colnames(df_numeric)[1]`, y = `r colnames(df_numeric)[2]`))
+```{r simple plot, echo = FALSE, warning = FALSE}
+x <- sym(colnames(df_numeric)[1])
+y <- sym(colnames(df_numeric)[2])
+
+df_input %>% 
+  ggplot(aes(!!x, !!y)) +
+  geom_point() 
+```
+
+## Basics of a ggplot code {.build}
+A note on ggplot style: while you can put the `+` at the beginning of the next line, it is generally put at the end of the previous line.
+
+How does this chunk of code differ from the previous chunk?
+
+ggplot(df_input) +    
+geom_point(aes(x = `r colnames(df_numeric)[1]`, y = `r colnames(df_numeric)[2]`))
+
+## Geoms {.build}
+When plotting your data, it is often helpful to take a glimpse at the data you intend to plot to know what kinds of variables you will be working with
+```{r glimpse again}
+glimpse(df_input)
+```
+
+## Geoms {.build}
+So now that you know your variable types, how do you know what geoms to use??
+Use the following resources! 
+  * https://rstudio.com/wp-content/uploads/2015/03/ggplot2-cheatsheet.pdf
+  * https://www.data-to-viz.com/ 
+
+Sometimes you will run into errors indicating more information is needed for a plot or that you do not have the correct variable types. For more in depth information on the geoms, I find the ggplot2 reference page more helpful than the built in help pages
+  * https://ggplot2.tidyverse.org/reference/index.html
+
+## Aesthetics {.build}
+Everything up to this point gets you a basic graph- but what about colors, shapes and overal style? 
+
+There are 5 basic aesthetics you can can change
+1. Color- changes the outline color of your datapoints
+2. size
+3. Shape
+4. alpha- changes the transparency of each point
+5. fill- changes the fill color of your points
+
+## Global vs Local {.build}
+In ggplot2, we have the options to set mappings globally or locally. Setting a mapping globally means to set those values in the original ggplot function.
+Example: Earlier in class you made this graph:
+
+ggplot(df_input) +    
+  geom_jitter(aes(x=`r colnames(df_character)[1]`, y=log(`r colnames(df_numeric)[1]`)))+
+  geom_boxplot(aes(x=`r colnames(df_character)[1]`, y=log(`r colnames(df_numeric)[1]`)))
+
+## Global vs Local {.build}
+```{r global v local, echo = FALSE, warning = FALSE}
+x <- sym(colnames(df_character)[1])
+y <- sym(colnames(df_numeric)[1])
+
+df_input %>% 
+  ggplot() +
+  geom_jitter(aes(!!x, !!y)) +
+  geom_boxplot(aes(!!x, !!y))
+```
+
+## Global vs Local {.build}
+However, if we map our x and y values in the ggplot function we find that we generate the same graph  
+ggplot(df_input, aes(x=`r colnames(df_character)[1]`, y=log(`r colnames(df_numeric)[1]`)) +
+geom_jitter() +  
+geom_boxplot()  
+```{r global v local repeat, echo = FALSE, warning = FALSE}
+x <- sym(colnames(df_character)[1])
+y <- sym(colnames(df_numeric)[1])
+
+df_input %>% 
+  ggplot() +
+  geom_jitter(aes(!!x, !!y)) +
+  geom_boxplot(aes(!!x, !!y))
+```
+
+## Global vs Local {.build}
+This is because when you set the aes mappings in the orignal ggplot function you are setting the aes **globally**.
+This means all the functions afterwards will inherit that mapping. So in our Example this means that both the jitter and boxplot geoms know to graph Cell Region by Protein Length
+
+You can also set aes values **locally** within the geom function. Doing so will only change the values in that geom
+
+## Global vs Local {.build}
+ggplot(df_input, aes(x=`r colnames(df_character)[1]`, y=log(`r colnames(df_numeric)[1]`)) +  
+  geom_jitter() +    
+  geom_boxplot(aes(color = log(`r colnames(df_character)[1]`))   
+```{r global v local colour, echo = FALSE, warning = FALSE}
+x <- sym(colnames(df_character)[1])
+y <- sym(colnames(df_numeric)[1])
+
+df_input %>% 
+  ggplot(aes(!!x, !!y)) +
+  geom_jitter() +
+  geom_boxplot(aes(colour = !!x))
+```
+
+## Global vs Local {.build}
+Data can also be set locally or globally. For this example, let's filter our original data first using the `dplyr::filter` function
+
+df_filter <- filter(df_input, `r colnames(df_numeric)[1]` > `r round(mean(df_numeric[[1]]))`)
+
+## Global vs Local {.build}
+Now, let's label only the proteins identified in our large_prot data by setting data locally in a new geom
+ggplot(df_input, aes(x=`r colnames(df_character)[1]`, y=log(`r colnames(df_numeric)[1]`)) +    
+  geom_jitter() +      
+  geom_boxplot(aes(color = log(`r colnames(df_character)[1]`)) +    
+  geom_label(data=df_filter, aes(label=`r colnames(df_character)[2]`))
+
+## Global vs Local {.build}
+```{r global v local colour filter, echo = FALSE, warning = FALSE}
+x <- sym(colnames(df_character)[1])
+z <- sym(colnames(df_character)[2])
+y <- sym(colnames(df_numeric)[1])
+df_filter <- filter(df_input, df_numeric[1] > round(mean(df_numeric[[1]])))
+
+df_input %>% 
+  ggplot(aes(!!x, !!y)) +
+  geom_jitter() +
+  geom_boxplot(aes(colour = !!x)) +
+  geom_label(data=df_filter, aes(label=!!z)) 
+```
+
+## Global vs Local {.build}
+You notice we have to indicate the new dataset, but because it has the same x and y values, we did not need to set those mappings
+
+## Labels and Legends {.build}
+You've likely noticed that up until this point ggplot has labeled axes, but not necessarily in a very pleasing manner.  
+We can change these settings in our graph using the labs() function.   
+
+Let's start by simply changing the x-axis label
+ggplot(df_input, aes(x=`r colnames(df_character)[1]`, y=log(`r colnames(df_numeric)[1]`)) +    
+  geom_jitter() +      
+  geom_boxplot(aes(color = log(`r colnames(df_character)[1]`)) +    
+  geom_label(data=df_filter, aes(label=`r colnames(df_character)[2]`)) +  
+  labs(x = "`r str_to_title(colnames(df_character)[1])`")
+
+## Labels and Legends {.build}
+```{r global v local colour filter label, echo = FALSE, warning = FALSE}
+x <- sym(colnames(df_character)[1])
+z <- sym(colnames(df_character)[2])
+y <- sym(colnames(df_numeric)[1])
+df_filter <- filter(df_input, df_numeric[1] > round(mean(df_numeric[[1]])))
+
+df_input %>% 
+  ggplot(aes(!!x, !!y)) +
+  geom_jitter() +
+  geom_boxplot(aes(colour = !!x)) +
+  geom_label(data=df_filter, aes(label=!!z)) +
+  labs(x = str_to_title(sym(colnames(df_character)[1])))
+```
+
+## Labels and Legends {.build}
+Now, seeing as we have a pretty explanatory legend, we could try to get rid of it. This becomes especially useful when ggplot gives you legends that don't make sense to show
+
+ggplot(df_input, aes(x=`r colnames(df_character)[1]`, y=log(`r colnames(df_numeric)[1]`)) +    
+  geom_jitter() +      
+  geom_boxplot(aes(color = log(`r colnames(df_character)[1]`)) +    
+  geom_label(data=df_filter, aes(label=`r colnames(df_character)[2]`)) +  
+  labs(x = "`r str_to_title(colnames(df_character)[1])`") +  
+  guides(color = "none")
+
+## Labels and Legends {.build}
+```{r global v local colour filter label guides, echo = FALSE, warning = FALSE}
+x <- sym(colnames(df_character)[1])
+z <- sym(colnames(df_character)[2])
+y <- sym(colnames(df_numeric)[1])
+df_filter <- filter(df_input, df_numeric[1] > round(mean(df_numeric[[1]])))
+
+df_input %>% 
+  ggplot(aes(!!x, !!y)) +
+  geom_jitter() +
+  geom_boxplot(aes(colour = !!x)) +
+  geom_label(data=df_filter, aes(label=!!z)) +
+  labs(x = str_to_title(sym(colnames(df_character)[1]))) +
+  guides(color = "none")
+```
+
+## Faceting {.build}
+Faceting allows you to create multiple graphs side by side in one panel. Especially useful when you want to see the data together, but not on top of eachother
+
+For example
+
+ggplot(df_input) +  
+geom_point(aes(x=`r colnames(df_character)[1]`, y=log(`r colnames(df_numeric)[1]`)) +  
+facet_grid(cols = vars(`r colnames(df_character)[2]`))
+
+## Faceting {.build}
+```{r facetting, echo = FALSE, warning = FALSE}
+x <- sym(colnames(df_character)[1])
+z <- sym(colnames(df_character)[2])
+y <- sym(colnames(df_numeric)[1])
+
+df_input %>% 
+  ggplot(aes(!!x, !!y)) +
+  geom_point() +
+  facet_grid(cols = vars(!!z))
+```
+
+## Coordinate flipping {.build}
+Coordinate flipping is an especially useful tool when your x-axis includes characters that overlap. Coordinate flipping keeps your mappings and aes the same, but flips coordinates so that your x-axis displays on the Y-axis instead. This allows any names included in the x-axis titles to be read more easily  
+
+ggplot(df_input) +  
+geom_jitter(aes(x=`r colnames(df_character)[1]`, y=log(`r colnames(df_numeric)[1]`)) +  
+coord_flip()
+
+## Coordinate flipping {.build}
+```{r coord flipping, echo = FALSE, warning = FALSE}
+x <- sym(colnames(df_character)[1])
+y <- sym(colnames(df_numeric)[1])
+
+df_input %>% 
+  ggplot(aes(!!x, !!y)) +
+  geom_jitter() +
+  coord_flip()
+```
+
+## Themes {.build}
+You can change almost everything you see on your chart, but a lot of the things you may look to change are part of the "theme"  
+
+Here we are going to change some features about our title text
+
+ggplot(df_input, aes(x=`r colnames(df_character)[1]`, y=log(`r colnames(df_numeric)[1]`)) +    
+  geom_jitter() +      
+  geom_boxplot(aes(color = log(`r colnames(df_character)[1]`)) +  
+  labs(title = "My first plot") +  
+  theme(
+     plot.title = element_text(face = "bold", size = 12)
+    ) 
+
+## Themes {.build}
+```{r themes, echo = FALSE, warning = FALSE}
+x <- sym(colnames(df_character)[1])
+z <- sym(colnames(df_character)[2])
+y <- sym(colnames(df_numeric)[1])
+df_filter <- filter(df_input, df_numeric[1] > round(mean(df_numeric[[1]])))
+
+df_input %>% 
+  ggplot(aes(!!x, !!y)) +
+  geom_jitter() +
+  geom_boxplot(aes(colour = !!x)) +
+  labs(title = "My first plot") +
+  theme(
+     plot.title = element_text(face = "bold", size = 12)
+    ) 
+```
+
+## Themes {.build}
+Next, let's change the aesthetics of our legend box  
+
+ggplot(df_input, aes(x=`r colnames(df_character)[1]`, y=log(`r colnames(df_numeric)[1]`)) +    
+  geom_jitter() +      
+  geom_boxplot(aes(color = log(`r colnames(df_character)[1]`)) +  
+  labs(title = "My first plot") +  
+  theme(
+     plot.title = element_text(face = "bold", size = 12),
+     legend.background = element_rect(fill="gray", colour="black")
+    ) 
+
+## Themes {.build}
+```{r themes two, echo = FALSE, warning = FALSE}
+x <- sym(colnames(df_character)[1])
+z <- sym(colnames(df_character)[2])
+y <- sym(colnames(df_numeric)[1])
+df_filter <- filter(df_input, df_numeric[1] > round(mean(df_numeric[[1]])))
+
+df_input %>% 
+  ggplot(aes(!!x, !!y)) +
+  geom_jitter() +
+  geom_boxplot(aes(colour = !!x)) +
+  labs(title = "My first plot") +
+  theme(
+     plot.title = element_text(face = "bold", size = 12),
+     legend.background = element_rect(fill="gray", colour="black")
+    ) 
+```
+
+## Themes {.build}
+Finally, let's change the legend postion  
+
+ggplot(df_input, aes(x=`r colnames(df_character)[1]`, y=log(`r colnames(df_numeric)[1]`)) +    
+  geom_jitter() +      
+  geom_boxplot(aes(color = log(`r colnames(df_character)[1]`)) +  
+  labs(title = "My first plot") +  
+  theme(
+     plot.title = element_text(face = "bold", size = 12),
+     legend.background = element_rect(fill="gray", colour="black"),
+     legend.position = "bottom"
+    ) 
+
+## Themes {.build}
+```{r themes three, echo = FALSE, warning = FALSE}
+x <- sym(colnames(df_character)[1])
+z <- sym(colnames(df_character)[2])
+y <- sym(colnames(df_numeric)[1])
+df_filter <- filter(df_input, df_numeric[1] > round(mean(df_numeric[[1]])))
+
+df_input %>% 
+  ggplot(aes(!!x, !!y)) +
+  geom_jitter() +
+  geom_boxplot(aes(colour = !!x)) +
+  labs(title = "My first plot") +
+  theme(
+     plot.title = element_text(face = "bold", size = 12),
+     legend.background = element_rect(fill="gray", colour="black"),
+     legend.position = "bottom"
+    ) 
+```
+
+## Themes {.build}
+Pre-Set themes also exist as an easy way to change the entire theme of your graph quickly. They can also be combined with custome theme settings  
+
+ggplot(df_input, aes(x=`r colnames(df_character)[1]`, y=log(`r colnames(df_numeric)[1]`)) +    
+  geom_jitter() +      
+  geom_boxplot(aes(color = log(`r colnames(df_character)[1]`)) +  
+  labs(title = "My first plot") +  
+  theme_bw()
+
+## Themes {.build}
+```{r themes four, echo = FALSE, warning = FALSE}
+x <- sym(colnames(df_character)[1])
+z <- sym(colnames(df_character)[2])
+y <- sym(colnames(df_numeric)[1])
+df_filter <- filter(df_input, df_numeric[1] > round(mean(df_numeric[[1]])))
+
+df_input %>% 
+  ggplot(aes(!!x, !!y)) +
+  geom_jitter() +
+  geom_boxplot(aes(colour = !!x)) +
+  labs(title = "My first plot") +
+  theme_bw()
+```
+
+## Saving plots using ggsave {.build}
+
+If you make a plot there are a few ways to save it, though the simplest is to use ggsave  
+
+ggsave("ggsaveexample.png")  
+
+You can change the type of file you save or even the size in inches.  
+example:  
+
+ggsave("ggsaveexample.pdf", width = 6, height = 6)  
+
+## Saving plots using ggsave {.build}
+Where does it save??
+
+getwd()
+```{r getwd}
+getwd()
+```
+
